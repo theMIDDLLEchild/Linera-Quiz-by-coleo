@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>LINERA QUIZ BY COLEO</title>
+  <style>
+    :root {
+      --linera-red: #D03232;
+      --bg: #0d0d0d;
+      --card: #161616;
+      --text: #f5f5f5;
+      --muted: #9a9a9a;
+      --green: #3fb950;
+      --danger: #e55353;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      background: radial-gradient(1000px 600px at 50% -20%, rgba(208,50,50,0.15), transparent 60%), var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    header {
+      background: #111;
+      border-bottom: 2px solid var(--linera-red);
+      padding: 0.5rem 1rem;
+    }
+    .header-inner {
+      width: min(1100px, 94vw);
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .logo {
+      display: inline-flex; align-items: center; gap: .6rem;
+    }
+    .logo svg { width: 36px; height: 36px; }
+    .brand {
+      font-weight: 800; letter-spacing: .3px; font-size: 1.05rem;
+    }
+    .titlebar {
+      margin-left: auto;
+      font-weight: 700;
+      color: var(--linera-red);
+    }
+    .wrap {
+      width: min(1100px, 92vw);
+      margin: 2rem auto;
+      display: grid;
+      grid-template-columns: 1fr 340px;
+      gap: 1.25rem;
+    }
+    @media (max-width: 900px) {
+      .wrap { grid-template-columns: 1fr; }
+    }
+    .card {
+      background: linear-gradient(180deg, #1b1b1b, #141414);
+      border: 1px solid #2a2a2a;
+      border-radius: 16px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+      padding: clamp(1rem, 2.5vw, 1.75rem);
+    }
+    .intro { color: var(--muted); margin-top: .25rem; }
+    .controls {
+      display: flex; gap: .75rem; flex-wrap: wrap; align-items: center; margin: 1rem 0 1.5rem;
+    }
+    button {
+      background: transparent;
+      border: 2px solid var(--linera-red);
+      color: var(--text);
+      padding: .8rem 1rem;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: .2s ease;
+      font-weight: 600;
+    }
+    button.primary {
+      background: var(--linera-red);
+      border-color: var(--linera-red);
+    }
+    button:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(208,50,50,.25); }
+    .question {
+      font-size: 1.1rem;
+      margin: .25rem 0 1rem;
+    }
+    .answers { display: grid; gap: .6rem; }
+    .answers button {
+      text-align: left;
+      background: #1e1e1e;
+      border: 1px solid #2a2a2a;
+      padding: .85rem 1rem;
+      border-radius: 10px;
+      font-weight: 500;
+    }
+    .answers button:hover { background: #262626; border-color: #3a3a3a; }
+    .meta { margin-top: 1rem; color: var(--muted); display: flex; gap: .75rem; justify-content: space-between; }
+    .hidden { display: none !important; }
+    .result {
+      text-align: center; padding: 2rem 1rem; 
+    }
+    .score {
+      font-size: clamp(1.4rem, 3.5vw, 2rem);
+      color: var(--linera-red);
+      font-weight: 800;
+      margin: .25rem 0 .75rem;
+    }
+    .name-entry {
+      display: flex; gap: .5rem; justify-content: center; margin-top: .5rem;
+    }
+    .name-entry input {
+      padding: .6rem .8rem;
+      border-radius: 8px;
+      border: 1px solid #2a2a2a;
+      background: #1a1a1a;
+      color: var(--text);
+      min-width: 200px;
+    }
+    .sidebar .card { position: sticky; top: 1rem; }
+    .sidebar h3 { margin: 0 0 .5rem; font-size: 1.05rem; }
+    .lb-list { list-style: none; padding: 0; margin: 0; }
+    .lb-item { 
+      display: flex; justify-content: space-between; align-items: center;
+      padding: .6rem .75rem; border: 1px solid #2a2a2a; background: #171717; border-radius: 10px; margin-bottom: .5rem;
+    }
+    .lb-rank { color: var(--muted); font-weight: 700; margin-right: .5rem; }
+    .lb-name { font-weight: 700; }
+    .lb-score { color: var(--green); font-weight: 800; }
+    footer {
+      padding: 2rem 1rem; text-align: center; color: var(--muted);
+    }
+    code.badge {
+      background: #1f1f1f; border: 1px solid #2a2a2a; padding: .25rem .5rem; border-radius: 6px; color: #ccc;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="header-inner">
+      <div class="logo" title="Linera">
+        <!-- Minimal on-brand SVG mark: red circle with 'L' cut -->
+        <svg viewBox="0 0 100 100" aria-hidden="true">
+          <defs>
+            <clipPath id="cut">
+              <rect x="52" y="10" width="38" height="80" rx="8" />
+            </clipPath>
+          </defs>
+          <circle cx="50" cy="50" r="38" fill="#D03232" clip-path="url(#cut)"/>
+          <rect x="22" y="18" width="16" height="64" rx="8" fill="#D03232"/>
+        </svg>
+        <span class="brand">Linera</span>
+      </div>
+      <div class="titlebar">LINERA QUIZ BY COLEO</div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="card">
+      <p class="intro">Each run gives you <strong>20 random questions</strong> from a bank of 50. Score is out of <strong>100</strong> (5 points per question). Good luck.</p>
+      <div class="controls">
+        <button id="startBtn" class="primary">Start Quiz</button>
+        <button id="restartBtn" class="hidden">Restart</button>
+        <span id="progress" class="intro"></span>
+      </div>
+
+      <div id="quizArea" class="hidden">
+        <div id="question" class="question"></div>
+        <div id="answers" class="answers"></div>
+        <div class="meta">
+          <div id="qIndex"></div>
+          <div id="scoreSoFar"></div>
+        </div>
+      </div>
+
+      <div id="resultArea" class="result hidden">
+        <div>Final score</div>
+        <div class="score" id="finalScore"></div>
+        <div id="summary" class="intro"></div>
+        <div class="name-entry" id="nameEntry" class="hidden">
+          <input id="playerName" placeholder="Enter name or handle"/>
+          <button id="saveScoreBtn" class="primary">Save to Leaderboard</button>
+        </div>
+      </div>
+    </section>
+
+    <aside class="sidebar">
+      <section class="card">
+        <h3>Leaderboard (local)</h3>
+        <ul id="leaderboard" class="lb-list"></ul>
+        <p class="intro">Stored in your browser via <code class="badge">localStorage</code>. Top 10 by score.</p>
+      </section>
+    </aside>
+  </main>
+
+  <footer>
+    Built with ❤️ for Linera learners. <code class="badge">#D03232</code>
+  </footer>
+
+  <script>
+    // 50-question pool (same as before)
+    const QUESTION_POOL = [
+      { "question": "What is Linera’s core scaling concept?", "answers": ["Sharding", "Microchains", "Sidechains", "State Channels"], "correct": 1 },
+      { "question": "What is a microchain in Linera?", "answers": ["A shard of Ethereum", "A personal/application-specific chain", "A L2 rollup", "A sidechain bridge"], "correct": 1 },
+      { "question": "What problem do microchains primarily address?", "answers": ["Consensus security", "Global congestion and shared execution bottlenecks", "GPU mining costs", "Lack of stablecoins"], "correct": 1 },
+      { "question": "Linera aims for what kind of latency on Testnet Conway demos?", "answers": ["~200 ms block finality", "~10 s finality", "~5 min finality", "~2 s finality"], "correct": 0 },
+      { "question": "Which phase name corresponds to Testnet 3?", "answers": ["Archimedes", "Babbage", "Maxwell", "Conway"], "correct": 3 },
+      { "question": "What does isolated execution mean in Linera?", "answers": ["Transactions are private by default", "One chain’s spike doesn’t clog others", "Blocks are mined solo", "No networking is needed"], "correct": 1 },
+      { "question": "What enables chains to sync when needed?", "answers": ["Mempools", "Certified messages", "Trusted relays only", "Manual checkpoints"], "correct": 1 },
+      { "question": "What is the role of elastic validator scaling?", "answers": ["Randomize validator order", "Expand/shrink workload with demand", "Slash inactive users", "Enable PoW"], "correct": 1 },
+      { "question": "Which crate is the Rust SDK for app development?", "answers": ["linera-service", "linera-sdk", "linera-storage-service", "linera-wallet"], "correct": 1 },
+      { "question": "Which crate provides the CLI and client binaries?", "answers": ["linera-service", "linera-sdk", "linera-storage-service", "linera-consensus"], "correct": 0 },
+      { "question": "Which crate provides a simple DB for local validators?", "answers": ["linera-storage-service", "linera-db", "linera-indexer", "linera-gql"], "correct": 0 },
+      { "question": "Linera wallets primarily sign what?", "answers": ["Transactions", "Blocks", "Receipts", "Messages only"], "correct": 1 },
+      { "question": "Where does a developer wallet keep its private state by default?", "answers": ["wallet.json", "wallet.db", "keys.json", "secrets.toml"], "correct": 0 },
+      { "question": "Where is the wallet node’s state stored by default?", "answers": ["wallet.json", "linera.db", "node.json", "state.bin"], "correct": 1 },
+      { "question": "Which command initializes a developer wallet via faucet?", "answers": ["linera wallet new", "linera wallet init --faucet <URL>", "linera init --wallet <URL>", "linera faucet --init"], "correct": 1 },
+      { "question": "How do you request a chain from a faucet?", "answers": ["linera chain request", "linera request --chain", "linera wallet request-chain --faucet <URL>", "linera faucet --new-chain"], "correct": 2 },
+      { "question": "How to list chains in the wallet?", "answers": ["linera chains", "linera wallet show", "linera show chains", "linera wallet list"], "correct": 1 },
+      { "question": "How to set the default chain?", "answers": ["linera wallet set-default <chain-id>", "linera default <chain-id>", "linera chain set <id>", "linera wallet select <id>"], "correct": 0 },
+      { "question": "Command to open a new chain from the default chain?", "answers": ["linera new-chain", "linera open-chain", "linera spawn-chain", "linera init-chain"], "correct": 1 },
+      { "question": "Open a multi-owner chain with fine control:", "answers": ["linera open-multi-owner-chain", "linera open-shared-chain", "linera chain-open-multi", "linera owners new"], "correct": 0 },
+      { "question": "What integration brings multi-wallet connectivity in Conway?", "answers": ["Dynamic", "WalletConnect v1", "RainbowKit", "Keplr"], "correct": 0 },
+      { "question": "Conway’s Game of Life points program is inspired by:", "answers": ["Alan Turing", "John Horton Conway", "Ada Lovelace", "Charles Babbage"], "correct": 1 },
+      { "question": "Which SDK version accompanies Conway?", "answers": ["0.13", "0.14", "0.15", "1.0"], "correct": 2 },
+      { "question": "Microchains help AI agents by:", "answers": ["Providing GPU access", "Isolating execution and avoiding global queues", "Offering free gas", "Encrypting all data"], "correct": 1 },
+      { "question": "Linera’s architecture is best described as:", "answers": ["Global shared-state machine", "User/app-local chains with message passing", "Monolithic PoW chain", "IBC-only model"], "correct": 1 },
+      { "question": "What does the CLI flag --wallet select?", "answers": ["Wallet file path", "Default chain", "Network", "Validator type"], "correct": 0 },
+      { "question": "What does the CLI flag --storage select?", "answers": ["RPC endpoint", "Local DB path/driver", "WASM cache", "Faucet URL"], "correct": 1 },
+      { "question": "Environment variable to pick wallet file:", "answers": ["LINERA_WALLET", "WALLET_FILE", "LINERA_KEYS", "CHAIN_WALLET"], "correct": 0 },
+      { "question": "Environment variable to pick storage:", "answers": ["LINERA_DB", "LINERA_STORAGE", "LINERA_NODE", "LINERA_STORE"], "correct": 1 },
+      { "question": "Switch wallet via index shorthand:", "answers": ["linera -W <i>", "linera --with-wallet <i>", "linera wallet use <i>", "linera wallet switch <i>"], "correct": 1 },
+      { "question": "What is the purpose of certified messages?", "answers": ["Fee payment", "Cross-chain verification/sync", "Key rotation", "Spam prevention only"], "correct": 1 },
+      { "question": "Developers write Linera apps primarily in:", "answers": ["Rust to WASM", "Go", "Python", "Solidity only"], "correct": 0 },
+      { "question": "Linera plans what for end users long-term?", "answers": ["Desktop-only wallet", "Browser extension wallet", "Paper wallets", "SMS wallet"], "correct": 1 },
+      { "question": "Which testnet phase focuses on governance?", "answers": ["Archimedes", "Babbage", "Maxwell", "Ada"], "correct": 3 },
+      { "question": "Which phase focuses on elastic scaling?", "answers": ["Archimedes", "Babbage", "Maxwell", "Ada"], "correct": 2 },
+      { "question": "Which phase validated core protocol mechanics?", "answers": ["Archimedes", "Babbage", "Maxwell", "Ada"], "correct": 0 },
+      { "question": "Babbage phase emphasis is on:", "answers": ["Mining rewards", "Developer experience/tooling", "New PoW algorithm", "Privacy defaults"], "correct": 1 },
+      { "question": "Conway showcases what main experience?", "answers": ["Ultra-low latency, wallet connectivity, points", "Pow mining pools", "Liquid staking derivatives", "Zero-knowledge voting"], "correct": 0 },
+      { "question": "End-to-end multi-user latency target in demos:", "answers": ["< 5s", "< 2s", "< 1s", "< 10s"], "correct": 2 },
+      { "question": "What file signals the default chain in output?", "answers": ["A green chain ID in `linera wallet show`", "default.json", "genesis.txt", "active.id"], "correct": 0 },
+      { "question": "Create chain for another wallet needs:", "answers": ["Their private key", "Their unassigned public key", "Their seed phrase", "Nothing extra"], "correct": 1 },
+      { "question": "What does `linera assign` do in that flow?", "answers": ["Transfers tokens", "Assigns new chain to the given public key", "Deletes a chain", "Rotates keys"], "correct": 1 },
+      { "question": "Which file do you add to PATH to use debug binaries?", "answers": ["$PWD/target/debug", "$HOME/.cargo/bin", "/usr/local/bin", "$PWD/bin"], "correct": 0 },
+      { "question": "What’s the point of a lightweight indexer (planned)?", "answers": ["To power explorers/dashboards", "To mine blocks faster", "To replace wallets", "To compress WASM"], "correct": 0 },
+      { "question": "Which wallets are supported via Dynamic integration?", "answers": ["Only MetaMask", "MetaMask, Phantom, Coinbase, and more", "Only Phantom", "Only Coinbase"], "correct": 1 },
+      { "question": "Inter-chain communication in Linera is via:", "answers": ["Shared mempool", "Certified messages", "Relays without proofs", "SNS topics"], "correct": 1 },
+      { "question": "The CLI binary name most devs use is:", "answers": ["linera", "linerad", "lineractl", "linera-node"], "correct": 0 },
+      { "question": "What’s a realistic use case that benefits from microchains?", "answers": ["Bursty games/social apps", "Cold storage", "Single bulk settlement monthly", "Proof-of-work mining"], "correct": 0 },
+      { "question": "Why is Linera suitable for AI agents?", "answers": ["GPU inference built-in", "Isolated, elastic execution per agent", "Free compute", "Central control"], "correct": 1 },
+      { "question": "What model does Linera’s scaling resemble?", "answers": ["Monolithic databases", "Cloud-style horizontal scaling", "Single-threaded apps", "Tape storage"], "correct": 1 },
+      { "question": "Primary programming target for contracts:", "answers": ["WASM", "EVM bytecode only", "x86 binaries", "Lua"], "correct": 0 }
+    ];
+
+    const TOTAL_PER_RUN = 20;
+    const POINTS_PER_Q = 5;
+
+    const startBtn = document.getElementById('startBtn');
+    const restartBtn = document.getElementById('restartBtn');
+    const quizArea = document.getElementById('quizArea');
+    const questionEl = document.getElementById('question');
+    const answersEl = document.getElementById('answers');
+    const qIndexEl = document.getElementById('qIndex');
+    const scoreSoFarEl = document.getElementById('scoreSoFar');
+    const resultArea = document.getElementById('resultArea');
+    const finalScoreEl = document.getElementById('finalScore');
+    const summaryEl = document.getElementById('summary');
+    const progressEl = document.getElementById('progress');
+    const nameEntry = document.getElementById('nameEntry');
+    const playerNameInput = document.getElementById('playerName');
+    const saveScoreBtn = document.getElementById('saveScoreBtn');
+    const leaderboardEl = document.getElementById('leaderboard');
+
+    let selectedSet = [];
+    let current = 0;
+    let score = 0;
+
+    // Leaderboard helpers (localStorage)
+    const LB_KEY = 'linera_quiz_lb_v1';
+
+    function getLeaderboard() {
+      try {
+        return JSON.parse(localStorage.getItem(LB_KEY)) || [];
+      } catch {
+        return [];
+      }
+    }
+    function saveLeaderboard(lb) {
+      localStorage.setItem(LB_KEY, JSON.stringify(lb));
+    }
+    function addToLeaderboard(name, score) {
+      const lb = getLeaderboard();
+      lb.push({ name, score, ts: Date.now() });
+      lb.sort((a,b) => b.score - a.score || a.ts - b.ts);
+      const top = lb.slice(0, 10);
+      saveLeaderboard(top);
+      renderLeaderboard();
+    }
+    function renderLeaderboard() {
+      const lb = getLeaderboard();
+      leaderboardEl.innerHTML = '';
+      if (lb.length === 0) {
+        const li = document.createElement('li');
+        li.className = 'lb-item';
+        li.innerHTML = '<span class="lb-name">No scores yet</span><span class="lb-score">—</span>';
+        leaderboardEl.appendChild(li);
+        return;
+      }
+      lb.forEach((row, idx) => {
+        const li = document.createElement('li');
+        li.className = 'lb-item';
+        li.innerHTML = '<span><span class="lb-rank">#'+(idx+1)+'</span><span class="lb-name">'+escapeHtml(row.name || 'Anon')+'</span></span>' +
+                       '<span class="lb-score">'+row.score+'</span>';
+        leaderboardEl.appendChild(li);
+      });
+    }
+    function escapeHtml(str) {
+      return String(str).replace(/[&<>"'`=\/]/g, s => ({
+        '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','/':'&#x2F;','`':'&#x60;','=':'&#x3D;','\\':'&#x5C;'
+      }[s]));
+    }
+
+    renderLeaderboard();
+
+    function shuffleArray(arr) {
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    }
+
+    function pickRandomQuestions() {
+      const pool = [...QUESTION_POOL];
+      shuffleArray(pool);
+      return pool.slice(0, TOTAL_PER_RUN).map(q => ({ 
+        question: q.question,
+        answers: shuffleAnswers(q.answers, q.correct)
+      }));
+    }
+
+    function shuffleAnswers(ans, correctIndex) {
+      const arr = ans.map((text, idx) => ({ text, isCorrect: idx === correctIndex }));
+      shuffleArray(arr);
+      return arr;
+    }
+
+    function startQuiz() {
+      score = 0;
+      current = 0;
+      selectedSet = pickRandomQuestions();
+      startBtn.classList.add('hidden');
+      restartBtn.classList.add('hidden');
+      resultArea.classList.add('hidden');
+      nameEntry.classList.add('hidden');
+      quizArea.classList.remove('hidden');
+      progressEl.textContent = `Pulled ${TOTAL_PER_RUN} from a bank of 50`;
+      renderQuestion();
+    }
+
+    function renderQuestion() {
+      const q = selectedSet[current];
+      questionEl.textContent = q.question;
+      answersEl.innerHTML = '';
+      q.answers.forEach((opt) => {
+        const btn = document.createElement('button');
+        btn.textContent = opt.text;
+        btn.addEventListener('click', () => handleAnswer(opt.isCorrect, btn));
+        answersEl.appendChild(btn);
+      });
+      qIndexEl.textContent = `Question ${current + 1} / ${TOTAL_PER_RUN}`;
+      scoreSoFarEl.textContent = `Score: ${score}/${TOTAL_PER_RUN * POINTS_PER_Q}`;
+    }
+
+    function handleAnswer(isCorrect, btn) {
+      if (isCorrect) {
+        score += POINTS_PER_Q;
+        btn.style.borderColor = varGet('--green');
+      } else {
+        btn.style.borderColor = varGet('--danger');
+      }
+      Array.from(answersEl.children).forEach(b => b.disabled = true);
+      setTimeout(() => {
+        current++;
+        if (current < TOTAL_PER_RUN) {
+          renderQuestion();
+        } else {
+          endQuiz();
+        }
+      }, 300);
+    }
+
+    function varGet(name) {
+      return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    }
+
+    function endQuiz() {
+      quizArea.classList.add('hidden');
+      resultArea.classList.remove('hidden');
+      finalScoreEl.textContent = `${score} / ${TOTAL_PER_RUN * POINTS_PER_Q}`;
+      const pct = Math.round((score / (TOTAL_PER_RUN * POINTS_PER_Q)) * 100);
+      summaryEl.textContent = `You answered ${score/POINTS_PER_Q} out of ${TOTAL_PER_RUN} correctly (${pct}%).`;
+      nameEntry.classList.remove('hidden');
+      restartBtn.classList.remove('hidden');
+      startBtn.classList.remove('hidden');
+      startBtn.textContent = 'Start Again';
+    }
+
+    saveScoreBtn.addEventListener('click', () => {
+      const name = playerNameInput.value.trim() || 'Anon';
+      addToLeaderboard(name, score);
+      playerNameInput.value = '';
+      nameEntry.classList.add('hidden');
+    });
+
+    startBtn.addEventListener('click', startQuiz);
+    restartBtn.addEventListener('click', startQuiz);
+  </script>
+</body>
+</html>
