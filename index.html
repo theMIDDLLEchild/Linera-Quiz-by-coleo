@@ -55,8 +55,13 @@
     .lb-rank { color:var(--muted); font-weight:700; margin-right:.5rem; }
     .lb-name { font-weight:700; }
     .lb-score { color:var(--green); font-weight:800; }
-    footer { padding:2rem 1rem; text-align:center; color:var(--muted); }
-    code.badge { background:#1f1f1f; border:1px solid #2a2a2a; padding:.25rem .5rem; border-radius:6px; color:#ccc; }
+    .review { margin-top: 1rem; }
+    .review h3 { margin: 1.2rem 0 .6rem; }
+    .rev-item { border:1px solid #2a2a2a; background:#171717; border-radius:10px; padding:.75rem; margin-bottom:.5rem; }
+    .rev-q { font-weight:700; margin-bottom:.4rem; }
+    .rev-a.correct { color: var(--green); }
+    .rev-a.wrong { color: var(--danger); }
+    .streak { display:flex; align-items:center; gap:.45rem; font-weight:700; color:#ffd166; }
   </style>
 </head>
 <body>
@@ -70,7 +75,8 @@
 
   <main class="wrap">
     <section class="card">
-      <p class="intro">Each round serves <strong>20 random questions</strong> from a bank of 50. Score is out of <strong>100</strong> (5 pts each). All questions are community-focused — no CLI needed.</p>
+      <div class="streak" id="streakBar">🔥 Streak: <span id="streakCount">0</span> day(s)</div>
+      <p class="intro">Each round serves <strong>20 random questions</strong> from a bank of 50. Score is out of <strong>100</strong> (5 pts each).</p>
       <div class="controls">
         <button id="startBtn" class="primary">Start Quiz</button>
         <button id="restartBtn" class="hidden">Restart</button>
@@ -94,6 +100,10 @@
           <input id="playerName" placeholder="Enter name or handle"/>
           <button id="saveScoreBtn" class="primary">Save to Leaderboard</button>
           <button id="shareBtn" class="primary hidden">Share on X</button>
+        </div>
+        <div id="reviewArea" class="review hidden">
+          <h3>Review Answers</h3>
+          <div id="reviewList"></div>
         </div>
       </div>
     </section>
@@ -131,16 +141,38 @@
     const saveScoreBtn = document.getElementById('saveScoreBtn');
     const shareBtn = document.getElementById('shareBtn');
     const leaderboardEl = document.getElementById('leaderboard');
+    const reviewArea = document.getElementById('reviewArea');
+    const reviewList = document.getElementById('reviewList');
+    const streakCount = document.getElementById('streakCount');
 
     let selectedSet = [];
     let current = 0;
     let score = 0;
+    let answersLog = [];
 
     const LB_KEY = 'linera_quiz_lb_v2';
+    const STREAK_KEY = 'linera_quiz_streak_v1';
 
-    function getLeaderboard() {
-      try { return JSON.parse(localStorage.getItem(LB_KEY)) || []; } catch (e) { return []; }
+    function getToday() {
+      const d = new Date();
+      return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
     }
+    function loadStreak() {
+      try { const data = JSON.parse(localStorage.getItem(STREAK_KEY)) || null; return data || { count:0, last:0 }; } catch(e) { return { count:0, last:0 }; }
+    }
+    function saveStreak(obj) { localStorage.setItem(STREAK_KEY, JSON.stringify(obj)); }
+    function updateStreakOnFinish() {
+      const today = getToday();
+      const st = loadStreak();
+      const oneDay = 24*60*60*1000;
+      if (st.last === today) { return st.count; }
+      else if (st.last === today - oneDay) { const n = (st.count || 0) + 1; saveStreak({ count:n, last:today }); return n; }
+      else { saveStreak({ count:1, last:today }); return 1; }
+    }
+    function renderStreak() { const st = loadStreak(); streakCount.textContent = st.count || 0; }
+    renderStreak();
+
+    function getLeaderboard() { try { return JSON.parse(localStorage.getItem(LB_KEY)) || []; } catch (e) { return []; } }
     function saveLeaderboard(lb) { localStorage.setItem(LB_KEY, JSON.stringify(lb)); }
     function addToLeaderboard(name, score) {
       const lb = getLeaderboard();
@@ -167,9 +199,7 @@
         leaderboardEl.appendChild(li);
       });
     }
-    function escapeHtml(str) {
-      return String(str).replace(/[&<>"'`=\/]/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','/':'&#x2F;','`':'&#x60;','=':'&#x3D;','\\':'&#x5C;'}[s]));
-    }
+    function escapeHtml(str) { return String(str).replace(/[&<>"'`=\/]/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','/':'&#x2F;','`':'&#x60;','=':'&#x3D;','\':'&#x5C;'}[s])); }
     renderLeaderboard();
 
     function shuffleArray(arr) {
@@ -183,14 +213,16 @@
     function pickRandomQuestions() {
       const pool = [...QUESTION_POOL];
       shuffleArray(pool);
-      return pool.slice(0, TOTAL_PER_RUN).map(q => ({ 
+      return pool.slice(0, TOTAL_PER_RUN).map(q => ({
         question: q.q,
-        answers: shuffleAnswers(q.a, q.c)
+        answers: shuffleAnswers(q.a, q.c),
+        correctIndexOriginal: q.c,
+        originalAnswers: q.a
       }));
     }
 
     function shuffleAnswers(ans, correctIndex) {
-      const arr = ans.map((text, idx) => ({ text, isCorrect: idx === correctIndex }));
+      const arr = ans.map((text, idx) => ({ text, isCorrect: idx === correctIndex, originalIndex: idx }));
       shuffleArray(arr);
       return arr;
     }
@@ -198,12 +230,14 @@
     function startQuiz() {
       score = 0;
       current = 0;
+      answersLog = [];
       selectedSet = pickRandomQuestions();
       startBtn.classList.add('hidden');
       restartBtn.classList.add('hidden');
       resultArea.classList.add('hidden');
       nameEntry.classList.add('hidden');
       shareBtn.classList.add('hidden');
+      reviewArea.classList.add('hidden');
       quizArea.classList.remove('hidden');
       progressEl.textContent = `Pulled ${TOTAL_PER_RUN} from a bank of ${QUESTION_POOL.length}`;
       renderQuestion();
@@ -216,24 +250,28 @@
       q.answers.forEach((opt) => {
         const btn = document.createElement('button');
         btn.textContent = opt.text;
-        btn.addEventListener('click', () => handleAnswer(opt.isCorrect, btn));
+        btn.addEventListener('click', () => handleAnswer(opt));
         answersEl.appendChild(btn);
       });
       qIndexEl.textContent = `Question ${current + 1} / ${TOTAL_PER_RUN}`;
       scoreSoFarEl.textContent = `Score: ${score}/${TOTAL_PER_RUN * POINTS_PER_Q}`;
     }
 
-    function handleAnswer(isCorrect, btn) {
-      if (isCorrect) { score += POINTS_PER_Q; btn.style.borderColor = varGet('--green'); }
-      else { btn.style.borderColor = varGet('--danger'); }
+    function handleAnswer(opt) {
+      const isCorrect = opt.isCorrect;
+      if (isCorrect) { score += POINTS_PER_Q; }
+      answersLog.push({
+        q: selectedSet[current].question,
+        chosen: opt.text,
+        correct: selectedSet[current].answers.find(a => a.isCorrect).text,
+        ok: isCorrect
+      });
       Array.from(answersEl.children).forEach(b => b.disabled = true);
       setTimeout(() => {
         current++;
         if (current < TOTAL_PER_RUN) { renderQuestion(); } else { endQuiz(); }
-      }, 300);
+      }, 250);
     }
-
-    function varGet(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
 
     function endQuiz() {
       quizArea.classList.add('hidden');
@@ -241,11 +279,27 @@
       finalScoreEl.textContent = `${score} / ${TOTAL_PER_RUN * POINTS_PER_Q}`;
       const pct = Math.round((score / (TOTAL_PER_RUN * POINTS_PER_Q)) * 100);
       summaryEl.textContent = `You answered ${score/POINTS_PER_Q} out of ${TOTAL_PER_RUN} correctly (${pct}%).`;
+      renderReview();
+      reviewArea.classList.remove('hidden');
+      updateStreakOnFinish();
+      renderStreak();
       nameEntry.classList.remove('hidden');
       restartBtn.classList.remove('hidden');
       startBtn.classList.remove('hidden');
       startBtn.textContent = 'Start Again';
       shareBtn.classList.remove('hidden');
+    }
+
+    function renderReview() {
+      reviewList.innerHTML = '';
+      answersLog.forEach((row, i) => {
+        const div = document.createElement('div');
+        div.className = 'rev-item';
+        div.innerHTML = `<div class="rev-q">${i+1}. ${escapeHtml(row.q)}</div>
+                         <div class="rev-a ${row.ok ? 'correct' : 'wrong'}">Your answer: ${escapeHtml(row.chosen)}</div>
+                         <div class="rev-a correct">Correct answer: ${escapeHtml(row.correct)}</div>`;
+        reviewList.appendChild(div);
+      });
     }
 
     saveScoreBtn.addEventListener('click', () => {
